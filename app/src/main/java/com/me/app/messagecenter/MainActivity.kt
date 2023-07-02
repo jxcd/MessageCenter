@@ -8,17 +8,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.room.Room
@@ -27,6 +30,8 @@ import com.me.app.messagecenter.ui.theme.MessageCenterTheme
 import com.me.app.messagecenter.util.AppDatabase
 import com.me.app.messagecenter.util.db
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 const val PERMISSION_REQUEST_SMS = 1
 
@@ -89,13 +94,18 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Column {
-                        Button(onClick = load) {
-                            Text(text = "刷新")
-                        }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(0.8f),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                        ) {
+                            Button(onClick = load) {
+                                Text(text = "刷新")
+                            }
 
-                        Button(onClick = clean) {
-                            Text(text = "清空")
+                            Button(onClick = clean) {
+                                Text(text = "清空")
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -112,23 +122,63 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ShowPayInfo(data: List<PayInfo>) {
     Column {
-        for (info in data) {
-            Row {
-                Text(text = "${info.time} ${info.money}")
+        SelectionContainer {
+            for (info in data) {
+                PayInfoRow(info = info)
             }
         }
     }
 }
 
+private val payInfoTime: (String) -> String = {
+    val time = LocalDateTime.parse(it)
+    val today = LocalDate.now()
+
+    var text = it.replace("T", " ")
+    if (time.year == today.year) {
+        text = text.substring(5)
+        // if (time.toLocalDate() == today) {
+        if (time.month == today.month && time.dayOfMonth == today.dayOfMonth) {
+            text = text.substring(6)
+        }
+    }
+    text
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
+private fun PayInfoRow(info: PayInfo) {
+    Card(
+        modifier = Modifier.padding(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(0.8f)) {
+                Text(text = payInfoTime(info.time))
+                Text(text = info.place, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Text(
+                text = info.money,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Black,
+                fontSize = 20.sp,
+            )
+        }
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     MessageCenterTheme {
-        Greeting("Android")
+        PayInfoRow(
+            PayInfo(
+                time = "2023/07/02T23:52",
+                money = "8.88",
+                place = "消费地点"
+            )
+        )
     }
 }
