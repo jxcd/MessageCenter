@@ -5,9 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import com.me.app.messagecenter.dto.PayInfo
-import java.math.BigDecimal
+import com.me.app.messagecenter.util.db
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class SMSReceiver : BroadcastReceiver() {
@@ -24,7 +26,12 @@ class SMSReceiver : BroadcastReceiver() {
             if (sender == "95559" &&
                 message.startsWith("您尾号*0000的卡于")
             ) {
-                println(payInfo(message))
+                payInfo(message)?.also {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        db.payInfoDao().insert(it)
+                        println("insert $it")
+                    }
+                }
             }
         }
     }
@@ -36,7 +43,15 @@ class SMSReceiver : BroadcastReceiver() {
 
     private val payInfo: (String) -> PayInfo? = { message: String ->
         pattern.find(message)?.groupValues?.let {
-            PayInfo(it[2], LocalDateTime.parse("${LocalDate.now().year}年${it[1]}", formatter), BigDecimal(it[4]), message, "SMS: 95559")
+            PayInfo(
+                place = it[2],
+                // time = LocalDateTime.parse("${LocalDate.now().year}年${it[1]}", formatter),
+                time = "${LocalDate.now().year}-${it[1].replace("月", "-").replace("日", "T")}",
+                money = it[3],
+                balance = it[4],
+                information = message,
+                source = "SMS: 95559"
+            )
         }
     }
 
