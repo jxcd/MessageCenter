@@ -35,8 +35,11 @@ import com.me.app.messagecenter.util.db
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.temporal.WeekFields
 
 class MainActivity : ComponentActivity() {
 
@@ -116,6 +119,8 @@ class MainActivity : ComponentActivity() {
                             onSubmit = { filter = it }
                         )
 
+                        PayStatistics(data = payInfoList)
+
                         ShowPayInfo(data = payInfoList, filter = filter)
                     }
                 }
@@ -169,6 +174,82 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PayStatistics(data: List<PayInfo>) {
+    Card(
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+    ) {
+        var countDay by remember { mutableStateOf(BigDecimal.ZERO) }
+        var totalDay by remember { mutableStateOf(BigDecimal.ZERO) }
+        var countWeek by remember { mutableStateOf(BigDecimal.ZERO) }
+        var totalWeek by remember { mutableStateOf(BigDecimal.ZERO) }
+        var countMonth by remember { mutableStateOf(BigDecimal.ZERO) }
+        var totalMonth by remember { mutableStateOf(BigDecimal.ZERO) }
+
+        LaunchedEffect(key1 = data.hashCode()) {
+            val now = LocalDate.now()
+
+            data.forEach {
+                val date = LocalDateTime.parse(it.time).toLocalDate()
+                val money = BigDecimal(it.money)
+
+                if (isSameMonth(date, now)) {
+                    countMonth++
+                    totalMonth += money
+
+                    if (isSameWeek(date, now)) {
+                        countWeek++
+                        totalWeek += money
+
+                        if (date == now) {
+                            countDay++
+                            totalDay += money
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "今日消费 ${countDay}笔, 共 $totalDay")
+            Text(text = "本周消费 ${countWeek}笔, 共 $totalWeek, 平均每日消费 ${div(totalWeek, countWeek, 2)}")
+            Text(
+                text =
+                "本月消费 ${countMonth}笔, 共 ${totalMonth}, 平均每日消费 ${div(totalMonth, countMonth, 2)}"
+            )
+        }
+
+    }
+}
+
+private fun div(
+    divisor: BigDecimal,
+    dividend: BigDecimal,
+    scale: Int = 3,
+    roundingMode: RoundingMode = RoundingMode.HALF_UP
+): BigDecimal {
+    if (BigDecimal.ZERO == dividend) {
+        return if (BigDecimal.ZERO == divisor) divisor else BigDecimal.valueOf(Double.NaN)
+    }
+    return divisor.divide(dividend, scale, roundingMode)
+}
+
+private fun isSameWeek(date1: LocalDate, date2: LocalDate): Boolean {
+    val weekFields = WeekFields.ISO
+    val week1 = date1.get(weekFields.weekOfWeekBasedYear())
+    val week2 = date2.get(weekFields.weekOfWeekBasedYear())
+    val year1 = date1.get(weekFields.weekBasedYear())
+    val year2 = date2.get(weekFields.weekBasedYear())
+
+    return week1 == week2 && year1 == year2
+}
+
+private fun isSameMonth(date1: LocalDate, date2: LocalDate): Boolean =
+    date1.year == date2.year && date1.monthValue == date2.monthValue
 
 @Composable
 fun ShowPayInfo(data: List<PayInfo>, filter: String) {
