@@ -78,7 +78,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val scope = rememberCoroutineScope()
                     var filter by remember { mutableStateOf("") }
-                    val payInfoList = db.payInfoDao().flow().collectAsState(initial = emptyList()).value
+                    val payInfoList =
+                        db.payInfoDao().flow().collectAsState(initial = emptyList()).value
 
                     val clean: () -> Unit = {
                         scope.launch {
@@ -179,7 +180,7 @@ fun ShowPayInfo(data: List<PayInfo>, filter: String) {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(data) { if (pattern(it.information)) PayInfoRow(info = it) }
+            items(data.filter { pattern(it.information) }) { PayInfoRow(info = it) }
         }
     }
 }
