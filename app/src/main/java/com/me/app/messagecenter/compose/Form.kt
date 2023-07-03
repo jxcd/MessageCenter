@@ -1,9 +1,9 @@
 package com.me.app.messagecenter.compose
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
@@ -12,9 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -147,7 +144,7 @@ fun InputValue(
     tips: String = "",
     enabled: Boolean = true,
     trailingIcon: @Composable (() -> Unit)? = null,
-    width: Dp = 400.dp,
+    width: Dp = TextFieldDefaults.MinWidth,
     height: Dp = TextFieldDefaults.MinHeight,
 ) {
     var error by remember { mutableStateOf(false) }
@@ -165,7 +162,7 @@ fun InputValue(
         onValueChange = change,
         label = { Text(label) },
         maxLines = 1,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        // keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         isError = error,
         enabled = enabled,
         trailingIcon = trailingIcon,
@@ -173,3 +170,62 @@ fun InputValue(
         // placeholder = { Text("请输入 $label${if (tips != "") ", $tips" else ""}") }
     )
 }
+
+/**
+ * 下拉选择器
+ */
+@Composable
+fun SelectOptions(
+    label: String = "",
+    value: String,
+    options: Collection<String>,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean = true,
+    buttonModifier: Modifier = Modifier,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    listModifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box() {
+        Button(
+            onClick = { expanded = !expanded },
+            modifier = buttonModifier,
+            enabled = enabled,
+            colors = buttonColors
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${if (label.isBlank()) "" else "$label: "}$value")
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = "展开/收起",
+                    modifier = Modifier.rotate(if (expanded) 180f else 0f)
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = listModifier
+        ) {
+            options.forEach {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = it,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onValueChange(it)
+                    },
+                )
+            }
+        }
+    }
+}
+
+
