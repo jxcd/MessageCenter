@@ -2,11 +2,14 @@ package com.me.app.messagecenter
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.database.Cursor
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
@@ -16,24 +19,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.me.app.messagecenter.dto.PayInfo
+import com.me.app.messagecenter.dto.payInfoFromBmcSms
 import com.me.app.messagecenter.ui.theme.MessageCenterTheme
 import com.me.app.messagecenter.util.AppDatabase
 import com.me.app.messagecenter.util.db
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 const val PERMISSION_REQUEST_SMS = 1
+const val PERMISSION_REQUEST_READ_SMS = 2
 
 class MainActivity : ComponentActivity() {
 
@@ -45,6 +52,14 @@ class MainActivity : ComponentActivity() {
             } else {
                 // RECEIVE_SMS 权限被拒绝
                 Toast.makeText(this, "没有 RECEIVE_SMS 权限", Toast.LENGTH_SHORT).show()
+            }
+        }
+    private val requestReadSmsForLoadPayInfo =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            if (it) {
+                readSmsHistory()
+            } else {
+                Toast.makeText(this, "没有 READ_SMS 权限, 无法读取历史消费记录", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -59,11 +74,11 @@ class MainActivity : ComponentActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             // 如果没有 RECEIVE_SMS 权限，则请求权限
-            ActivityCompat.requestPermissions(
+            /*ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.RECEIVE_SMS),
                 PERMISSION_REQUEST_SMS
-            )
+            )*/
             // 如果没有 RECEIVE_SMS 权限，则请求权限
             requestPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
         }
@@ -93,6 +108,20 @@ class MainActivity : ComponentActivity() {
                             load()
                         }
                     }
+                    val loadHistory: () -> Unit = {
+                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                            != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            /*ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(Manifest.permission.RECEIVE_SMS),
+                                PERMISSION_REQUEST_READ_SMS
+                            )*/
+                            requestReadSmsForLoadPayInfo.launch(Manifest.permission.READ_SMS)
+                        } else {
+                            readSmsHistory()
+                        }
+                    }
 
                     Column(modifier = Modifier.fillMaxSize()) {
                         Row(
@@ -106,6 +135,10 @@ class MainActivity : ComponentActivity() {
                             Button(onClick = clean) {
                                 Text(text = "清空")
                             }
+
+                            Button(onClick = loadHistory) {
+                                Text(text = "加载")
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -117,12 +150,58 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private val readSmsHistory: () -> Unit = {
+        // val contentResolver: ContentResolver = contentResolver
+        // 查询收件箱，可以替换为其他类型的 Uri
+        val uri: Uri = Uri.parse("content://sms/inbox")
+        // 查询条件，查询来自95559的短信
+        val selection = "address = '95559'"
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val s = System.currentTimeMillis()
+            val history = db.payInfoDao().selectAll()
+            val set = HashSet<String>()
+            history.forEach { set.add(it.information) }
+
+            // 查询短信数据库
+            val cursor: Cursor? = contentResolver.query(uri, null, selection, null, "date desc")
+
+            // 遍历查询结果
+            var i = 0
+            var save = 0
+            cursor?.use { c ->
+                while (c.moveToNext()) {
+                    i++
+                    val body = c.getString(12)
+                    if (!set.contains(body)) {
+                        val payInfo = payInfoFromBmcSms(body, c.getLong(4))
+                        if (payInfo == null) {
+                            println("skip by null, body: $body")
+                            continue
+                        }
+
+                        payInfo.apply {
+                            println("find history $this")
+                            db.payInfoDao().insert(this)
+                            set.add(body)
+                            save++
+                        }
+                    } else {
+                        // println("skip by history $body...")
+                    }
+                }
+            }
+            val e = System.currentTimeMillis()
+            println("耗时 ${e - s}ms, 处理数据库记录 ${history.size}条, 短信库记录 ${i}条, 持久化 ${save}条")
+        }
+    }
 }
 
 @Composable
 fun ShowPayInfo(data: List<PayInfo>) {
-    Column {
-        SelectionContainer {
+    SelectionContainer {
+        Column {
             for (info in data) {
                 PayInfoRow(info = info)
             }
@@ -149,14 +228,15 @@ private val payInfoTime: (String) -> String = {
 @Composable
 private fun PayInfoRow(info: PayInfo) {
     Card(
-        modifier = Modifier.padding(8.dp),
+        modifier = Modifier.padding(8.dp)
+            .also { if (info.revenue) it.background(Color.Green) },
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(0.8f)) {
-                Text(text = payInfoTime(info.time))
+                Text(text = "${payInfoTime(info.time)} ${info.platform}")
                 Text(text = info.place, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Text(
