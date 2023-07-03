@@ -15,21 +15,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.room.Room
+import com.me.app.messagecenter.compose.InputTextWithSubmit
 import com.me.app.messagecenter.dto.PayInfo
 import com.me.app.messagecenter.dto.payInfoFromBmcSms
 import com.me.app.messagecenter.ui.theme.MessageCenterTheme
@@ -81,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val scope = rememberCoroutineScope()
+                    var filter by remember { mutableStateOf("") }
                     val payInfoList: MutableList<PayInfo> = remember { mutableStateListOf() }
 
                     val load: () -> Unit = {
@@ -108,7 +106,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(0.8f),
                             horizontalArrangement = Arrangement.SpaceAround,
@@ -126,11 +127,13 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(2.dp))
+                        InputTextWithSubmit(
+                            label = "过滤",
+                            onSubmit = { filter = it }
+                        )
 
-                        ShowPayInfo(data = payInfoList)
+                        ShowPayInfo(data = payInfoList, filter = filter)
                     }
-
                 }
             }
         }
@@ -184,12 +187,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ShowPayInfo(data: List<PayInfo>) {
+fun ShowPayInfo(data: List<PayInfo>, filter: String) {
     SelectionContainer(modifier = Modifier.fillMaxSize()) {
+        val not = filter.startsWith("!!!")
+        val key = if (not) filter.substring(3) else filter
+        val pattern: (String) -> Boolean = { key.isBlank() || it.contains(key).xor(not) }
+
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(data) { PayInfoRow(info = it) }
+            items(data) { if (pattern(it.information)) PayInfoRow(info = it) }
         }
     }
 }
@@ -237,7 +244,7 @@ private fun PayInfoRow(info: PayInfo) {
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     MessageCenterTheme {
