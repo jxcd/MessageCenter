@@ -11,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -39,17 +41,11 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-const val PERMISSION_REQUEST_SMS = 1
-const val PERMISSION_REQUEST_READ_SMS = 2
-
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                // RECEIVE_SMS 权限已授予，可以执行相应操作
-                // ...
-            } else {
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            if (!it) {
                 // RECEIVE_SMS 权限被拒绝
                 Toast.makeText(this, "没有 RECEIVE_SMS 权限", Toast.LENGTH_SHORT).show()
             }
@@ -73,12 +69,6 @@ class MainActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            // 如果没有 RECEIVE_SMS 权限，则请求权限
-            /*ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECEIVE_SMS),
-                PERMISSION_REQUEST_SMS
-            )*/
             // 如果没有 RECEIVE_SMS 权限，则请求权限
             requestPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
         }
@@ -112,11 +102,6 @@ class MainActivity : ComponentActivity() {
                         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
                             != PackageManager.PERMISSION_GRANTED
                         ) {
-                            /*ActivityCompat.requestPermissions(
-                                this,
-                                arrayOf(Manifest.permission.RECEIVE_SMS),
-                                PERMISSION_REQUEST_READ_SMS
-                            )*/
                             requestReadSmsForLoadPayInfo.launch(Manifest.permission.READ_SMS)
                         } else {
                             readSmsHistory()
@@ -200,11 +185,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ShowPayInfo(data: List<PayInfo>) {
-    SelectionContainer {
-        Column {
-            for (info in data) {
-                PayInfoRow(info = info)
-            }
+    SelectionContainer(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items(data) { PayInfoRow(info = it) }
         }
     }
 }
@@ -239,11 +224,14 @@ private fun PayInfoRow(info: PayInfo) {
                 Text(text = "${payInfoTime(info.time)} ${info.platform}")
                 Text(text = info.place, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
+            val color = if (info.revenue) Color.Green
+            else Color.Unspecified
             Text(
                 text = info.money,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
+                color = color
             )
         }
     }
