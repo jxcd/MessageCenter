@@ -72,28 +72,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MessageCenterTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val scope = rememberCoroutineScope()
                     var filter by remember { mutableStateOf("") }
-                    val payInfoList: MutableList<PayInfo> = remember { mutableStateListOf() }
-
-                    val load: () -> Unit = {
-                        scope.launch {
-                            db.payInfoDao().selectAll().also {
-                                payInfoList.clear()
-                                payInfoList.addAll(it)
-                            }
-                        }
-                    }
+                    val payInfoList = db.payInfoDao().flow().collectAsState(initial = emptyList()).value
 
                     val clean: () -> Unit = {
                         scope.launch {
                             db.payInfoDao().deleteAll()
-                            load()
                         }
                     }
                     val loadHistory: () -> Unit = {
@@ -108,22 +97,16 @@ class MainActivity : ComponentActivity() {
 
                     Column(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(0.8f),
-                            horizontalArrangement = Arrangement.SpaceAround,
-                        ) {
-                            Button(onClick = load) {
-                                Text(text = "刷新")
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Button(onClick = loadHistory) {
+                                Text(text = "加载")
                             }
 
                             Button(onClick = clean) {
                                 Text(text = "清空")
-                            }
-
-                            Button(onClick = loadHistory) {
-                                Text(text = "加载")
                             }
                         }
 
@@ -241,19 +224,5 @@ private fun PayInfoRow(info: PayInfo) {
                 color = color
             )
         }
-    }
-}
-
-//@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    MessageCenterTheme {
-        PayInfoRow(
-            PayInfo(
-                time = "2023/07/02T23:52",
-                money = "8.88",
-                place = "消费地点"
-            )
-        )
     }
 }

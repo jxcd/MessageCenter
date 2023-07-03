@@ -1,6 +1,7 @@
 package com.me.app.messagecenter.dto
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 private const val tableName = "pay_info"
@@ -31,6 +32,9 @@ data class PayInfo(
 
 @Dao
 interface PayInfoDao {
+    @Query("SELECT * FROM $tableName ORDER BY timestamp desc")
+    fun flow() : Flow<List<PayInfo>>
+
     @Query("SELECT * FROM $tableName ORDER BY timestamp desc")
     suspend fun selectAll(): List<PayInfo>
 
