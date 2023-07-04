@@ -189,24 +189,37 @@ fun PayStatistics(data: List<PayInfo>) {
         var totalWeek by remember { mutableStateOf(BigDecimal.ZERO) }
         var countMonth by remember { mutableStateOf(BigDecimal.ZERO) }
         var totalMonth by remember { mutableStateOf(BigDecimal.ZERO) }
+        var today by remember { mutableStateOf(LocalDate.now()) }
 
-        LaunchedEffect(key1 = data.hashCode()) {
-            val now = LocalDate.now()
+        LaunchedEffect(LocalDate.now()) { today = LocalDate.now() }
+
+        LaunchedEffect(data.hashCode()) {
+            today = LocalDate.now()
+
+            BigDecimal.ZERO.also {
+                countDay = it
+                totalDay = it
+                countWeek = it
+                totalWeek = it
+                countMonth = it
+                totalMonth = it
+            }
 
             data.forEach {
                 val date = LocalDateTime.parse(it.time).toLocalDate()
-                val money = BigDecimal(it.money)
+                val money = BigDecimal(it.money).let { m -> if (it.revenue) -m else m }
+                val count = BigDecimal.ONE.let { v -> if (it.revenue) -v else v }
 
-                if (isSameMonth(date, now)) {
-                    countMonth++
+                if (isSameMonth(date, today)) {
+                    countMonth += count
                     totalMonth += money
 
-                    if (isSameWeek(date, now)) {
-                        countWeek++
+                    if (isSameWeek(date, today)) {
+                        countWeek += count
                         totalWeek += money
 
-                        if (date == now) {
-                            countDay++
+                        if (date == today) {
+                            countDay += count
                             totalDay += money
                         }
                     }
@@ -216,15 +229,26 @@ fun PayStatistics(data: List<PayInfo>) {
 
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "今日消费 ${countDay}笔, 共 $totalDay")
-            Text(text = "本周消费 ${countWeek}笔, 共 $totalWeek, 平均每日消费 ${div(totalWeek, countWeek, 2)}")
+            Text(
+                text = "本周消费 ${countWeek}笔, 共 $totalWeek, 平均每日消费 " +
+                        "${div(totalWeek, today.dayOfWeek.value, 2)}"
+            )
             Text(
                 text =
-                "本月消费 ${countMonth}笔, 共 ${totalMonth}, 平均每日消费 ${div(totalMonth, countMonth, 2)}"
+                "本月消费 ${countMonth}笔, 共 ${totalMonth}, 平均每日消费 " +
+                        "${div(totalMonth, today.dayOfMonth, 2)}"
             )
         }
 
     }
 }
+
+private fun div(
+    divisor: BigDecimal,
+    dividend: Number,
+    scale: Int = 3,
+    roundingMode: RoundingMode = RoundingMode.HALF_UP
+): BigDecimal = div(divisor, BigDecimal(dividend.toString()), scale, roundingMode)
 
 private fun div(
     divisor: BigDecimal,
