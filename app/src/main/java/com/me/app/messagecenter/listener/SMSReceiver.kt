@@ -1,4 +1,4 @@
-package com.me.app.messagecenter
+package com.me.app.messagecenter.listener
 
 import android.content.BroadcastReceiver
 import android.content.Context
