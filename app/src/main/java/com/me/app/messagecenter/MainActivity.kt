@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.me.app.messagecenter.compose.page.PageInfoPage
-import com.me.app.messagecenter.dto.payInfoFromBmcSms
+import com.me.app.messagecenter.service.impl.PayInfoParseFromBcSms
 import com.me.app.messagecenter.ui.theme.MessageCenterTheme
 import com.me.app.messagecenter.util.AppDatabase
 import com.me.app.messagecenter.util.db
@@ -101,7 +101,8 @@ class MainActivity : ComponentActivity() {
                     i++
                     val body = c.getString(12)
                     if (!set.contains(body)) {
-                        val payInfo = payInfoFromBmcSms(body, c.getLong(4))
+                        val payInfo =
+                            PayInfoParseFromBcSms.parse(body)?.apply { this.timestamp = c.getLong(4) }
                         if (payInfo == null) {
                             println("skip by null, body: $body")
                             continue

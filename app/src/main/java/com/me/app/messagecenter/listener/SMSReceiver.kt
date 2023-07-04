@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
-import com.me.app.messagecenter.dto.payInfoFromBmcSms
+import com.me.app.messagecenter.service.impl.PayInfoParseFromBcSms
 import com.me.app.messagecenter.util.db
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +31,8 @@ class SMSReceiver : BroadcastReceiver() {
             if (sender == "95559" &&
                 smsMessage.message.startsWith("您尾号*0000的卡于")
             ) {
-                payInfoFromBmcSms(smsMessage.toString(), smsMessage.timestamp)?.also {
+                PayInfoParseFromBcSms.parse(smsMessage.toString())
+                    ?.apply { this.timestamp = smsMessage.timestamp }?.also {
                     CoroutineScope(Dispatchers.IO).launch {
                         db.payInfoDao().insert(it)
                         println("insert $it")
