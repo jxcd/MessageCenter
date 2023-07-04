@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -306,12 +307,31 @@ private fun PayInfoRow(info: PayInfo) {
         modifier = Modifier.padding(8.dp)
             .also { if (info.revenue) it.background(Color.Green) },
     ) {
+        val icon = when (info.platform) {
+            "支付宝" -> R.drawable.icon_zfb
+            "美团" -> R.drawable.icon_mt
+            "京东" -> R.drawable.icon_jd
+            "拼多多" -> R.drawable.icon_pdd
+            "抖音" -> R.drawable.icon_dy
+            else -> R.drawable.icon_money
+        }
+
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(0.8f)) {
-                Text(text = "${payInfoTime(info.time)} ${info.platform}")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(id = icon),
+                        contentDescription = info.platform,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(text = payInfoTime(info.time))
+                }
                 Text(text = info.place, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             val color = if (info.ignoreStatistics) Color.Gray
