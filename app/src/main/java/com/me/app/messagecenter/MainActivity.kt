@@ -14,7 +14,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -105,24 +104,33 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Button(onClick = loadHistory) {
-                                Text(text = "加载")
-                            }
-
-                            Button(onClick = clean) {
-                                Text(text = "清空")
-                            }
-                        }
-
                         InputTextWithSubmit(
                             label = "过滤",
                             onSubmit = { filter = it }
                         )
 
-                        PayStatistics(data = payInfoList)
+                        LazyColumn(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            item {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                ) {
+                                    Button(onClick = loadHistory) { Text(text = "加载") }
+                                    Button(onClick = clean) { Text(text = "清空") }
+                                }
+                            }
 
-                        ShowPayInfo(data = payInfoList, filter = filter)
+                            item { PayStatistics(data = payInfoList) }
+
+                            val not = filter.startsWith("!!!")
+                            val key = if (not) filter.substring(3) else filter
+                            val pattern: (String) -> Boolean =
+                                { key.isBlank() || it.contains(key).xor(not) }
+
+                            items(payInfoList.filter { pattern(it.information) }) { PayInfoRow(info = it) }
+                        }
                     }
                 }
             }
@@ -180,9 +188,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PayStatistics(data: List<PayInfo>) {
     Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
+        modifier = Modifier.padding(8.dp)
     ) {
         var countDay by remember { mutableStateOf(BigDecimal.ZERO) }
         var totalDay by remember { mutableStateOf(BigDecimal.ZERO) }
@@ -277,21 +283,6 @@ private fun isSameWeek(date1: LocalDate, date2: LocalDate): Boolean {
 
 private fun isSameMonth(date1: LocalDate, date2: LocalDate): Boolean =
     date1.year == date2.year && date1.monthValue == date2.monthValue
-
-@Composable
-fun ShowPayInfo(data: List<PayInfo>, filter: String) {
-    SelectionContainer(modifier = Modifier.fillMaxSize()) {
-        val not = filter.startsWith("!!!")
-        val key = if (not) filter.substring(3) else filter
-        val pattern: (String) -> Boolean = { key.isBlank() || it.contains(key).xor(not) }
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(data.filter { pattern(it.information) }) { PayInfoRow(info = it) }
-        }
-    }
-}
 
 private val payInfoTime: (String) -> String = {
     val time = LocalDateTime.parse(it)
