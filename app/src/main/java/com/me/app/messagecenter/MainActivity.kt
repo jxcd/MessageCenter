@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -206,6 +207,8 @@ fun PayStatistics(data: List<PayInfo>) {
             }
 
             data.forEach {
+                if (it.ignoreStatistics) return@forEach
+
                 val date = LocalDateTime.parse(it.time).toLocalDate()
                 val money = BigDecimal(it.money).let { m -> if (it.revenue) -m else m }
                 val count = BigDecimal.ONE.let { v -> if (it.revenue) -v else v }
@@ -320,14 +323,20 @@ private fun PayInfoRow(info: PayInfo) {
                 Text(text = "${payInfoTime(info.time)} ${info.platform}")
                 Text(text = info.place, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            val color = if (info.revenue) Color.Green
+            val color = if (info.ignoreStatistics) Color.Gray
+            else if (info.revenue) Color.Green
             else Color.Unspecified
             Text(
                 text = info.money,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
-                color = color
+                color = color,
+                modifier = Modifier.clickable {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        db.payInfoDao().toggleIgnoreStatistics(info.id, !info.ignoreStatistics)
+                    }
+                }
             )
         }
     }

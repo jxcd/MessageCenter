@@ -24,6 +24,8 @@ data class PayInfo(
     val source: String = "",
     // 时间戳
     val timestamp: Long = 0L,
+    // 忽略统计
+    var ignoreStatistics: Boolean = false
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Int = 0
@@ -33,7 +35,7 @@ data class PayInfo(
 @Dao
 interface PayInfoDao {
     @Query("SELECT * FROM $tableName ORDER BY timestamp desc")
-    fun flow() : Flow<List<PayInfo>>
+    fun flow(): Flow<List<PayInfo>>
 
     @Query("SELECT * FROM $tableName ORDER BY timestamp desc")
     suspend fun selectAll(): List<PayInfo>
@@ -44,8 +46,12 @@ interface PayInfoDao {
     @Delete
     suspend fun delete(payInfo: PayInfo)
 
-    @Query("DELETE FROM $tableName")
+     @Query("DELETE FROM $tableName")
+//    @Query("TRUNK $tableName")
     suspend fun deleteAll()
+
+    @Query("UPDATE $tableName SET ignoreStatistics = :ignore WHERE id = :id")
+    suspend fun toggleIgnoreStatistics(id: Int, ignore: Boolean)
 
 }
 
