@@ -2,6 +2,7 @@ package com.me.app.messagecenter.compose.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -83,7 +84,9 @@ fun PageInfoPage(
 @Composable
 private fun PayStatistics(data: List<PayInfo>) {
     Card(
-        modifier = Modifier.padding(8.dp).fillMaxWidth()
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
     ) {
         var countDay by remember { mutableStateOf(BigDecimal.ZERO) }
         var totalDay by remember { mutableStateOf(BigDecimal.ZERO) }
@@ -150,8 +153,15 @@ private fun PayStatistics(data: List<PayInfo>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PayInfoRow(info: PayInfo) {
+    var details by remember { mutableStateOf(false) }
+    var editRemark by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.padding(8.dp)
+            .clickable {
+                details = !details
+                if (details) editRemark = false
+            }
             .also { if (info.revenue) it.background(Color.Green) },
     ) {
         val icon = when (info.platform) {
@@ -179,13 +189,33 @@ private fun PayInfoRow(info: PayInfo) {
                     )
                     Text(text = payInfoTime(info.time))
                 }
-                Text(text = info.place, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = info.place,
+                    maxLines = if (details) 5 else 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (details) {
+                    val remark = info.remark
+                    if (remark.isBlank() || editRemark) {
+                        InputTextWithSubmit(label = "备注", defaultValue = remark, onSubmit = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                db.payInfoDao().updateRemark(info.id, it)
+                                editRemark = false
+                            }
+                        })
+                    } else {
+                        Text(text = remark, modifier = Modifier.clickable { editRemark = true })
+                    }
+                }
+
+
             }
             val color = if (info.ignoreStatistics) Color.Gray
             else if (info.revenue) Color.Green
             else Color.Unspecified
             Text(
-                text = info.money,
+                text = "￥${info.money}",
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,

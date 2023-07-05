@@ -24,7 +24,9 @@ data class PayInfo(
     // 时间戳
     var timestamp: Long = 0L,
     // 忽略统计
-    var ignoreStatistics: Boolean = false
+    var ignoreStatistics: Boolean = false,
+    // 备注
+    var remark: String = "",
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Int = 0
@@ -48,4 +50,6 @@ interface PayInfoDao {
     @Query("UPDATE $tableName SET ignoreStatistics = :ignore WHERE id = :id")
     suspend fun toggleIgnoreStatistics(id: Int, ignore: Boolean)
 
+    @Query("UPDATE $tableName SET remark = :remark WHERE id = :id")
+    suspend fun updateRemark(id: Int, remark: String)
 }
