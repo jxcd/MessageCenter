@@ -2,7 +2,6 @@ package com.me.app.messagecenter.service.impl
 
 import android.content.ContentResolver
 import android.database.Cursor
-import android.net.Uri
 import com.me.app.messagecenter.dto.PayInfo
 import com.me.app.messagecenter.service.MessageParse
 import com.me.app.messagecenter.service.SmsReader
@@ -19,7 +18,15 @@ object PayInfoParseFromBcSms : MessageParse<PayInfo>, SmsReader {
 
     // private val platformKey = listOf("支付宝", "（特约）美团消费", "京东支付", "拼多多支付", "抖音支付")
     private val platformMap =
-        mapOf("支付宝" to "支付宝", "美团" to "美团", "京东支付" to "京东", "拼多多支付" to "拼多多", "抖音支付" to "抖音")
+        mapOf(
+            "支付宝" to "支付宝",
+            "微信" to "微信",
+            "财付通" to "微信",
+            "美团" to "美团",
+            "京东支付" to "京东",
+            "拼多多支付" to "拼多多",
+            "抖音支付" to "抖音"
+        )
     private val revenueKey = listOf("转入", "退费", "退款", "退货")
 
     override fun parse(message: String): PayInfo? {

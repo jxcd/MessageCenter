@@ -197,6 +197,7 @@ private fun PayInfoRow(info: PayInfo) {
     ) {
         val icon = when (info.platform) {
             "支付宝" -> R.drawable.icon_zfb
+            "微信" -> R.drawable.icon_wx
             "美团" -> R.drawable.icon_mt
             "京东" -> R.drawable.icon_jd
             "拼多多" -> R.drawable.icon_pdd
