@@ -1,8 +1,11 @@
-package com.me.app.messagecenter.compose.page
+package com.me.app.messagecenter.compose.payinfo
 
+import android.Manifest
+import android.content.ContentResolver
+import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,15 +14,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.me.app.messagecenter.R
 import com.me.app.messagecenter.compose.InputTextWithSubmit
 import com.me.app.messagecenter.dto.PayInfo
+import com.me.app.messagecenter.util.requestPermissionCallback
+import com.me.app.messagecenter.util.requestPermissionLauncher
+import com.me.app.messagecenter.service.impl.PayInfoParseFromBcSms
 import com.me.app.messagecenter.util.db
 import com.me.app.messagecenter.util.div
 import com.me.app.messagecenter.util.isSameMonth
@@ -31,19 +39,42 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+const val ReadSmsForLoadPayInfo = "ReadSmsForLoadPayInfo"
+
 @Composable
 fun PageInfoPage(
-    loadHistory: () -> Unit,
+    contentResolver: ContentResolver,
 ) {
     var filter by remember { mutableStateOf("") }
     val payInfoList =
         db.payInfoDao().flow().collectAsState(initial = emptyList()).value
+    val context = LocalContext.current
+
+    LaunchedEffect(ReadSmsForLoadPayInfo) {
+        requestPermissionCallback[ReadSmsForLoadPayInfo] = {
+            if (it) {
+                PayInfoParseFromBcSms.readFromSms(contentResolver)
+            } else {
+                Toast.makeText(context, "没有 READ_SMS 权限, 无法读取历史消费记录", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     val clean: () -> Unit = {
         CoroutineScope(Dispatchers.IO).launch {
             db.payInfoDao().deleteAll()
         }
     }
+    val loadHistory: () -> Unit = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher[ReadSmsForLoadPayInfo]?.launch(Manifest.permission.READ_SMS)
+        } else {
+            PayInfoParseFromBcSms.readFromSms(contentResolver)
+        }
+    }
+
 
     Column(
         modifier = Modifier.fillMaxSize(),

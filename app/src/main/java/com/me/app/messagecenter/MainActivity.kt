@@ -13,11 +13,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.room.Room
-import com.me.app.messagecenter.compose.page.PageInfoPage
-import com.me.app.messagecenter.service.impl.PayInfoParseFromBcSms
+import com.me.app.messagecenter.compose.payinfo.PageInfoPage
+import com.me.app.messagecenter.compose.payinfo.ReadSmsForLoadPayInfo
 import com.me.app.messagecenter.ui.theme.MessageCenterTheme
 import com.me.app.messagecenter.util.AppDatabase
 import com.me.app.messagecenter.util.db
+import com.me.app.messagecenter.util.requestPermissionCallback
+import com.me.app.messagecenter.util.requestPermissionLauncher
 
 class MainActivity : ComponentActivity() {
 
@@ -27,12 +29,7 @@ class MainActivity : ComponentActivity() {
         db = Room.databaseBuilder(this, AppDatabase::class.java, "MessageCenter")
             .fallbackToDestructiveMigration()
             .build()
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestReceiveSmsPermission.launch(Manifest.permission.RECEIVE_SMS)
-        }
+        permissionOnInit()
 
         setContent {
             MessageCenterTheme {
@@ -40,37 +37,28 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val loadHistory: () -> Unit = {
-                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
-                            != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            requestReadSmsForLoadPayInfo.launch(Manifest.permission.READ_SMS)
-                        } else {
-                            readSmsHistory()
-                        }
-                    }
-
-                    PageInfoPage(loadHistory = loadHistory)
+                    PageInfoPage(contentResolver = contentResolver)
                 }
             }
         }
     }
 
+    private fun permissionOnInit() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestReceiveSmsPermission.launch(Manifest.permission.RECEIVE_SMS)
+        }
+
+        requestPermissionLauncher[ReadSmsForLoadPayInfo] = requestReadSmsForLoadPayInfo
+    }
+
     private val requestReceiveSmsPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            if (!it) {
-                // RECEIVE_SMS 权限被拒绝
-                Toast.makeText(this, "没有 RECEIVE_SMS 权限", Toast.LENGTH_SHORT).show()
-            }
+            if (!it) Toast.makeText(this, "没有 RECEIVE_SMS 权限", Toast.LENGTH_SHORT).show()
         }
     private val requestReadSmsForLoadPayInfo =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            if (it) {
-                readSmsHistory()
-            } else {
-                Toast.makeText(this, "没有 READ_SMS 权限, 无法读取历史消费记录", Toast.LENGTH_SHORT).show()
-            }
+            requestPermissionCallback[ReadSmsForLoadPayInfo]?.apply { this(it) }
         }
-
-    private val readSmsHistory: () -> Unit = { PayInfoParseFromBcSms.readFromSms(contentResolver) }
 }
