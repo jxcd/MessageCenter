@@ -44,6 +44,9 @@ interface PayInfoDao {
     @Insert
     suspend fun insert(vararg payInfo: PayInfo)
 
+    @Delete
+    suspend fun delete(vararg payInfo: PayInfo)
+
     @Query("DELETE FROM $tableName")
     suspend fun deleteAll()
 
