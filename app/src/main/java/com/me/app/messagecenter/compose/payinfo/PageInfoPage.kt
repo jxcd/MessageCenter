@@ -202,6 +202,7 @@ private fun PayInfoRow(info: PayInfo) {
             "微信" -> R.drawable.icon_wx
             "美团" -> R.drawable.icon_mt
             "京东" -> R.drawable.icon_jd
+            "三星" -> R.drawable.icon_samsungpay
             "拼多多" -> R.drawable.icon_pdd
             "抖音" -> R.drawable.icon_dy
             else -> R.drawable.icon_money

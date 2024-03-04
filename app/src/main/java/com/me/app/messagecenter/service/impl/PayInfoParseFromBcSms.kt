@@ -24,6 +24,8 @@ object PayInfoParseFromBcSms : MessageParse<PayInfo>, SmsReader {
             "财付通" to "微信",
             "美团" to "美团",
             "京东支付" to "京东",
+            "京东金融" to "京东",
+            "SamsungPay" to "三星",
             "拼多多支付" to "拼多多",
             "抖音支付" to "抖音"
         )
